@@ -1,117 +1,129 @@
+from __future__ import division
 from pprint import pprint as pp
-import csv
 from Distance import *
-from Location import *
-from MapboxAPI import *
+from GeoCoding import *
+from Optimise import *
+from FileManagement import *
+from Functions import *
+from Time import *
+from operator import itemgetter
 
 
-places = []
+# Start Arrays
+
 location_results = []
-
-def read_file():
-    try:
-        f = open('/Users/laurencesugars/Documents/Python/latlongs.txt')
-        for student in f.readlines():
-            places.append(student)
-        f.close()
-    except Exception:
-        print("could not read file")
+duration_results_one = []
+duration_results_two = []
 
 
-def save_file(results):
-    try:
-        f = open("places3.txt", "a")
-        for place in results:
-            f.write("%s\n" % place)
-        f.close()
-    except Exception:
-        print("could not write to file")
 
-
-def create_csv(results):
-    with open("latlongs.csv", "w") as f:
-        w = csv.writer(f)
-        w.writerows(results)
-
+# Builds a list of location details from various sources
 
 def get_location_details(list_of_locations):
     for x in list_of_locations:
         location_one = x
         for x in list_of_locations:
             location_two = x
-            result_one = distance_google(location_one, location_two)
-            result_two = haversine(location_one, location_two)
-            location_results.append(result_one)
-            location_results[-1]['Haversine_distance'] = result_two
-            google_distance = location_results[-1]["distance"]
-            retrieve_distance = distance_calculator()
 
-            haversine_google_diff = retrieve_distance.haversine_google_difference(result_two, google_distance)
-            location_results[-1]['Haversine_Google_Diff'] = haversine_google_diff
+            google_result = distance_google(location_one, location_two)
+            haversine_result = distance_haversine(location_one, location_two)
+            mapbox_result = time_mapbox_matrix(location_one, location_two)
+
+            location_results.append(google_result)
+            location_results[-1]['Haversine_distance'] = haversine_result
+            location_results[-1]['Mapbox_time'] = mapbox_result
+
+            google_distance = location_results[-1]["distance"]
+            haversine_google_diff = haversine_google_difference(haversine_result, google_distance)
+            location_results[-1]['Haversine_Google_Distance_Diff'] = haversine_google_diff
+
+            google_time = location_results[-1]['duration']
+            mapbox_google_diff = abs(google_time - int(mapbox_result))
+            location_results[-1]['Mapbox_Google_Distance_Diff'] = mapbox_google_diff
+
     return location_results
 
 
-def haversine(location_one, location_two):  #Invokes Distance_Haversine Function
-    result = distance_haversine(location_one, location_two)
-    return result
 
-def distance_google(shipFrom, shipTo):  #Retrieves the GoogleAPI distance between two locations
-    retrieve_distance = distance_calculator()
-    distance = retrieve_distance.get_distance_google(shipFrom, shipTo)
-    return distance
+# Compares Google and Map Box AIP Durations
+
+def get_durations(list_of_locations):
+
+    for x in list_of_locations:
+        location_one = x
+        for x in list_of_locations:
+            location_two = x
+
+            list = []
+            durations = time_calculator()
+
+            google_duration = durations.get_duration_google(location_one, location_two)
+            mapbox_duration = time_mapbox_matrix(location_one, location_two)
+
+            list.append(google_duration)
+            list.append(mapbox_duration)
+
+            google_mapbox_diff = abs(int(google_duration) - int(mapbox_duration))
+            list.append(google_mapbox_diff)
+
+            if mapbox_duration and google_duration is not 0:
+                list.append(round((google_mapbox_diff / ((mapbox_duration + google_duration)/2))*100, 1))
+            else:
+                list.append("n/a")
+
+            duration_results_one.append(list)
+
+            for result in duration_results_one:
+                if "n/a" in result:
+                    duration_results_one.remove(result)
+
+            sorted_duration_results = sorted(duration_results_one, key=itemgetter(3))
+
+        headers = []
+
+        headers.append("Google Duration")
+        headers.append("Mapbox Duration")
+        headers.append("Duration Difference")
+        headers.append("Percentage Difference")
+        sorted_duration_results.insert(0, headers)
+
+    return sorted_duration_results
 
 
-def distance_haversine(shipFrom, shipTo):   #Retrieves the Haversine distance between two locations
-    retrieve_distance = distance_calculator()
-    distance = retrieve_distance.get_distance_haversine(shipFrom, shipTo)
-    return distance
+# Finds the shortest and longest duration between two locations
 
-def haversine_google_diff(shipFrom, shipTo):    #Retrieves distance difference from two locations between haversine and google API
-    retrieve_distance = distance_calculator()
-    distance = retrieve_distance.haversine_google_difference(shipFrom, shipTo)
-    return distance
+def shortest_longest_duration(list_of_locations):
 
+    for x in list_of_locations:
+        location_one = x
+        for x in list_of_locations:
+            location_two = x
 
-def lat_long(shippingAddress):      #Geocoding
-    retrieve_latlong = location()
-    lat_long = retrieve_latlong.latlong_finder(shippingAddress)
-    return lat_long
+            list = []
+            durations = time_calculator()
 
-def address(latLong):       #Reverse Geocoding
-    retrieve_address = location()
-    address = retrieve_address.address_finder(latLong)
-    return address
+            google_duration = durations.get_duration_google(location_one, location_two)
+            mapbox_duration = time_mapbox_matrix(location_one, location_two)
+            graph_hopper_duration = durations.get_duration_graph_hopper(location_one, location_two)
 
-def optimise(latlongs): #Finds optimal trip between set of latlongs
-    retrieve_trip = mapbox()
-    longlats = retrieve_trip.long_lats(latlongs)
-    trip = retrieve_trip.optimise(longlats)
-    print(trip)
-    return trip
+            list.append(google_duration)
+            list.append(mapbox_duration)
+            list.append(graph_hopper_duration)
 
+            duration_results_two.append(list)
 
+    headers = []
 
+    headers.append("Google Duration")
+    headers.append("Mapbox Duration")
+    headers.append("Graph Hopper Duration")
+    duration_results_two.insert(0, headers)
+
+    return duration_results_two
 
 read_file()
-optimise(places)
-
-
-#get_location_details(places)
-#print(pp(location_results))
-
-
-#save_file(new_list)
-#create_csv(new_list)
-
-#latlong = "51.145669, 0.310311"
-#print(address(latlong))
-#place = "19 Sandhurst Road, TN2 3GA"
-#print(lat_long(place))
-
-
-
-
-
+result = shortest_longest_duration(places)
+create_csv(result)
 
 
 

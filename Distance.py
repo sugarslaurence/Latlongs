@@ -2,6 +2,7 @@ from pprint import pprint as pp
 import googlemaps
 from ApiKeys import *
 import math
+from GraphHopper import *
 
 class distance_calculator:
 
@@ -14,6 +15,7 @@ class distance_calculator:
         origin = my_distance["origin_addresses"]
         destination = my_distance["destination_addresses"]
         return {"distance" : distance_meters, "duration" : duration_minutes, "shipFrom" : origin, "shipTo": destination}
+
 
 
     def get_distance_haversine(self, shipFrom, shipTo):
@@ -33,11 +35,14 @@ class distance_calculator:
         rounded_haversine_distance_in_meters = round(haversine_distance * 1000, -1)
         return rounded_haversine_distance_in_meters
 
-    def haversine_google_difference(self, haversine, google):
-        one = int(haversine)
-        two = int(google)
-        diff = abs(haversine - google)
-        return diff
 
-    def latlong_finder(self, shippingAddress):
-        pass
+    def get_distance_graph_hopper(self, shipFrom, shipTo):
+        distance = graph_hopper()
+        graph_hopper_routing = distance.graph_hopper_routing(shipFrom, shipTo)
+        graph_hopper_distance = graph_hopper_routing['distance']
+        return graph_hopper_distance
+
+
+
+
+
