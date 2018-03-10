@@ -2,13 +2,13 @@ from pprint import pprint as pp
 
 # Graph Hopper Main
 
-request_one = {
+default = {
     "objectives": [{
         "type": "min",
         "value": "transport_time"
     }],
     "vehicles": [{
-        "vehicle_id": "vehicle1",
+        "vehicle_id": "1",
         "start_address": {
             "location_id": "home_location_tower_bridge",
             "lon": -0.075338,
@@ -38,23 +38,30 @@ new_vehicle = {
     'type_id': 'vehicle_type_1'}
 
 
-def graph_hopper_request_builder(vehicles=3, objective_function='transport_time'):
+def graph_hopper_request_builder(vehicles=3):
 
-    default_body = request_one
-    default_body['objectives'] = objective_function
-    new_vehicle = default_body['vehicles']
+    default_body = default
+    new_vehicle_template = default_body['vehicles'][0]  # dict
+
 
     vehicles_list = []
 
     for x in range(0, vehicles):
-        vehicles_list.append(new_vehicle)
-    print(pp(vehicles_list[0][0]['vehicle_id']))
-    print(type(vehicles_list[0][0]['vehicle_id']))
+
+        vehicle = new_vehicle_template.copy()
+        vehicle['vehicle_id'] = x
+        vehicles_list.append(vehicle)
+
+    default_body["vehicles"] = vehicles_list
+
+    print(pp(default_body))
+
 
 
 graph_hopper_request_builder()
 
 # Request Payloads
+
 
 request_three = {
         "objectives": [{
